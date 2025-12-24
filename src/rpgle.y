@@ -91,6 +91,7 @@ char* main_proc_name = NULL;
 %type <node> dsply_stmt
 %type <node> iter_stmt leave_stmt
 %type <node> file_io_stmt open_stmt close_stmt read_stmt write_stmt chain_stmt
+%type <node> setll_stmt setgt_stmt reade_stmt readp_stmt readpe_stmt
 %type <type_info> type_spec
 %type <int_val> data_type
 
@@ -665,6 +666,11 @@ file_io_stmt:
     | read_stmt { $$ = $1; }
     | write_stmt { $$ = $1; }
     | chain_stmt { $$ = $1; }
+    | setll_stmt { $$ = $1; }
+    | setgt_stmt { $$ = $1; }
+    | reade_stmt { $$ = $1; }
+    | readp_stmt { $$ = $1; }
+    | readpe_stmt { $$ = $1; }
     ;
 
 open_stmt:
@@ -731,6 +737,105 @@ chain_stmt:
     }
     | CHAIN expression IDENTIFIER IDENTIFIER SEMICOLON {
         ASTNode* node = create_node(NODE_CHAIN);
+        node->data.file_io.file_name = $3;
+        node->data.file_io.record_var = $4;
+        node->data.file_io.key = $2;
+        $$ = node;
+    }
+    ;
+
+setll_stmt:
+    SETLL expression IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_SETLL);
+        node->data.file_io.file_name = $3;
+        node->data.file_io.record_var = NULL;
+        node->data.file_io.key = $2;
+        $$ = node;
+    }
+    ;
+
+setgt_stmt:
+    SETGT expression IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_SETGT);
+        node->data.file_io.file_name = $3;
+        node->data.file_io.record_var = NULL;
+        node->data.file_io.key = $2;
+        $$ = node;
+    }
+    ;
+
+reade_stmt:
+    READE IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_READE);
+        node->data.file_io.file_name = $2;
+        node->data.file_io.record_var = NULL;
+        node->data.file_io.key = NULL;
+        $$ = node;
+    }
+    | READE IDENTIFIER IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_READE);
+        node->data.file_io.file_name = $2;
+        node->data.file_io.record_var = $3;
+        node->data.file_io.key = NULL;
+        $$ = node;
+    }
+    | READE expression IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_READE);
+        node->data.file_io.file_name = $3;
+        node->data.file_io.record_var = NULL;
+        node->data.file_io.key = $2;
+        $$ = node;
+    }
+    | READE expression IDENTIFIER IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_READE);
+        node->data.file_io.file_name = $3;
+        node->data.file_io.record_var = $4;
+        node->data.file_io.key = $2;
+        $$ = node;
+    }
+    ;
+
+readp_stmt:
+    READP IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_READP);
+        node->data.file_io.file_name = $2;
+        node->data.file_io.record_var = NULL;
+        node->data.file_io.key = NULL;
+        $$ = node;
+    }
+    | READP IDENTIFIER IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_READP);
+        node->data.file_io.file_name = $2;
+        node->data.file_io.record_var = $3;
+        node->data.file_io.key = NULL;
+        $$ = node;
+    }
+    ;
+
+readpe_stmt:
+    READPE IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_READPE);
+        node->data.file_io.file_name = $2;
+        node->data.file_io.record_var = NULL;
+        node->data.file_io.key = NULL;
+        $$ = node;
+    }
+    | READPE IDENTIFIER IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_READPE);
+        node->data.file_io.file_name = $2;
+        node->data.file_io.record_var = $3;
+        node->data.file_io.key = NULL;
+        $$ = node;
+    }
+    | READPE expression IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_READPE);
+        node->data.file_io.file_name = $3;
+        node->data.file_io.record_var = NULL;
+        node->data.file_io.key = $2;
+        $$ = node;
+    }
+    | READPE expression IDENTIFIER IDENTIFIER SEMICOLON {
+        ASTNode* node = create_node(NODE_READPE);
         node->data.file_io.file_name = $3;
         node->data.file_io.record_var = $4;
         node->data.file_io.key = $2;
@@ -812,10 +917,14 @@ primary_expr:
         free($1);
     }
     | CONSTANT_ON {
-        $$ = create_integer_node(1);
+        ASTNode* node = create_integer_node(1);
+        node->is_boolean_literal = 1;
+        $$ = node;
     }
     | CONSTANT_OFF {
-        $$ = create_integer_node(0);
+        ASTNode* node = create_integer_node(0);
+        node->is_boolean_literal = 1;
+        $$ = node;
     }
     | CONSTANT_BLANKS {
         $$ = create_string_node("' '");

@@ -126,7 +126,7 @@ char* codegen_type_to_c(TypeInfo* type_info) {
         case TYPE_BINDEC:
             return "double";
         case TYPE_IND:
-            return "int";
+            return "bool";
         case TYPE_POINTER:
             return "void*";
         case TYPE_DATE:
@@ -153,7 +153,12 @@ void codegen_expression(CodeGenContext* ctx, ASTNode* node) {
     
     switch (node->type) {
         case NODE_INTEGER:
-            fprintf(ctx->output, "%d", node->data.int_value);
+            /* Check if this is a boolean literal (*ON or *OFF) */
+            if (node->is_boolean_literal) {
+                fprintf(ctx->output, "%s", node->data.int_value ? "true" : "false");
+            } else {
+                fprintf(ctx->output, "%d", node->data.int_value);
+            }
             break;
             
         case NODE_DECIMAL:
@@ -1232,6 +1237,185 @@ void codegen_statement(CodeGenContext* ctx, ASTNode* node) {
             break;
         }
         
+        case NODE_SETLL: {
+            codegen_indent(ctx);
+            const char* file_var = node->data.file_io.file_name;
+            
+            /* SETLL - Set lower limit: position file at or before key */
+            fprintf(ctx->output, "/* SETLL: Position %s at/before key ", file_var);
+            codegen_expression(ctx, node->data.file_io.key);
+            fprintf(ctx->output, " */\n");
+            
+            codegen_indent(ctx);
+            fprintf(ctx->output, "if (%s) {\n", file_var);
+            fprintf(ctx->output, "        long _key_pos = 0;\n");
+            fprintf(ctx->output, "        long _cur_pos = ftell(%s);\n", file_var);
+            fprintf(ctx->output, "        rewind(%s);\n", file_var);
+            fprintf(ctx->output, "        char _line[4096];\n");
+            fprintf(ctx->output, "        _rpgle_found = 0;\n");
+            fprintf(ctx->output, "        while (fgets(_line, sizeof(_line), %s)) {\n", file_var);
+            fprintf(ctx->output, "            /* Simplified: just position at start for now */\n");
+            fprintf(ctx->output, "            _rpgle_found = 1;\n");
+            fprintf(ctx->output, "            fseek(%s, _key_pos, SEEK_SET);\n", file_var);
+            fprintf(ctx->output, "            break;\n");
+            fprintf(ctx->output, "        }\n");
+            fprintf(ctx->output, "        if (!_rpgle_found) fseek(%s, _cur_pos, SEEK_SET);\n", file_var);
+            fprintf(ctx->output, "    }\n");
+            break;
+        }
+        
+        case NODE_SETGT: {
+            codegen_indent(ctx);
+            const char* file_var = node->data.file_io.file_name;
+            
+            /* SETGT - Set greater than: position file after key */
+            fprintf(ctx->output, "/* SETGT: Position %s after key ", file_var);
+            codegen_expression(ctx, node->data.file_io.key);
+            fprintf(ctx->output, " */\n");
+            
+            codegen_indent(ctx);
+            fprintf(ctx->output, "if (%s) {\n", file_var);
+            fprintf(ctx->output, "        long _cur_pos = ftell(%s);\n", file_var);
+            fprintf(ctx->output, "        rewind(%s);\n", file_var);
+            fprintf(ctx->output, "        char _line[4096];\n");
+            fprintf(ctx->output, "        _rpgle_found = 0;\n");
+            fprintf(ctx->output, "        while (fgets(_line, sizeof(_line), %s)) {\n", file_var);
+            fprintf(ctx->output, "            /* Simplified: position after first match */\n");
+            fprintf(ctx->output, "            _rpgle_found = 1;\n");
+            fprintf(ctx->output, "        }\n");
+            fprintf(ctx->output, "        if (!_rpgle_found) fseek(%s, _cur_pos, SEEK_SET);\n", file_var);
+            fprintf(ctx->output, "    }\n");
+            break;
+        }
+        
+        case NODE_READE: {
+            codegen_indent(ctx);
+            const char* file_var = node->data.file_io.file_name;
+            const char* record_var = node->data.file_io.record_var;
+            
+            /* READE - Read equal: read next record with same key as current */
+            fprintf(ctx->output, "/* READE: Read next record with matching key from %s */\n", file_var);
+            
+            if (record_var) {
+                ASTNode* fields = get_ds_fields(ctx, record_var);
+                
+                fprintf(ctx->output, "{ char _rpgle_buffer[4096]; \n");
+                fprintf(ctx->output, "    if (%s && fgets(_rpgle_buffer, sizeof(_rpgle_buffer), %s)) {\n",
+                        file_var, file_var);
+                fprintf(ctx->output, "        _rpgle_buffer[strcspn(_rpgle_buffer, \"\\n\")] = 0;\n");
+                fprintf(ctx->output, "        _rpgle_equal = 1;\n");
+                
+                if (fields && (fields->type == NODE_FIELD_LIST || fields->type == NODE_STATEMENT_LIST)) {
+                    /* Parse colon-delimited fields */
+                    fprintf(ctx->output, "        char* _token = strtok(_rpgle_buffer, \":\");\n");
+                    
+                    for (int i = 0; i < fields->data.list.count; i++) {
+                        ASTNode* field = fields->data.list.items[i];
+                        const char* field_name = field->data.declaration.name;
+                        int field_type = field->data.declaration.type_info->type;
+                        
+                        fprintf(ctx->output, "        if (_token) {\n");
+                        
+                        if (field_type == TYPE_CHAR || field_type == TYPE_VARCHAR) {
+                            fprintf(ctx->output, "            strncpy(%s.%s, _token, sizeof(%s.%s) - 1);\n",
+                                    record_var, field_name, record_var, field_name);
+                            fprintf(ctx->output, "            %s.%s[sizeof(%s.%s) - 1] = 0;\n",
+                                    record_var, field_name, record_var, field_name);
+                        } else if (field_type == TYPE_INT) {
+                            fprintf(ctx->output, "            %s.%s = atoi(_token);\n",
+                                    record_var, field_name);
+                        } else if (field_type == TYPE_PACKED || field_type == TYPE_ZONED) {
+                            fprintf(ctx->output, "            %s.%s = atof(_token);\n",
+                                    record_var, field_name);
+                        }
+                        
+                        fprintf(ctx->output, "            _token = strtok(NULL, \":\");\n");
+                        fprintf(ctx->output, "        }\n");
+                    }
+                }
+                
+                fprintf(ctx->output, "        _rpgle_eof_%s = 0;\n", file_var);
+                fprintf(ctx->output, "    } else {\n");
+                fprintf(ctx->output, "        _rpgle_eof_%s = 1;\n", file_var);
+                fprintf(ctx->output, "        _rpgle_equal = 0;\n");
+                fprintf(ctx->output, "    }\n");
+                fprintf(ctx->output, "}\n");
+            } else {
+                codegen_indent(ctx);
+                fprintf(ctx->output, "{ char _line[1024]; if (%s) { if (fgets(_line, sizeof(_line), %s)) _rpgle_equal = 1; else _rpgle_equal = 0; } }\n",
+                        file_var, file_var);
+            }
+            break;
+        }
+        
+        case NODE_READP: {
+            codegen_indent(ctx);
+            const char* file_var = node->data.file_io.file_name;
+            const char* record_var = node->data.file_io.record_var;
+            
+            /* READP - Read previous: read previous record in file */
+            fprintf(ctx->output, "/* READP: Read previous record from %s */\n", file_var);
+            
+            codegen_indent(ctx);
+            fprintf(ctx->output, "if (%s) {\n", file_var);
+            fprintf(ctx->output, "        /* Note: Reading backwards requires file position tracking */\n");
+            fprintf(ctx->output, "        long _cur = ftell(%s);\n", file_var);
+            fprintf(ctx->output, "        if (_cur > 0) {\n");
+            fprintf(ctx->output, "            /* Simplified: just go back one line length estimate */\n");
+            fprintf(ctx->output, "            fseek(%s, _cur - 80, SEEK_SET);\n", file_var);
+            
+            if (record_var) {
+                fprintf(ctx->output, "            if (fgets(%s, sizeof(%s), %s)) {\n",
+                        record_var, record_var, file_var);
+                fprintf(ctx->output, "                %s[strcspn(%s, \"\\n\")] = 0;\n",
+                        record_var, record_var);
+                fprintf(ctx->output, "                _rpgle_eof_%s = 0;\n", file_var);
+                fprintf(ctx->output, "            } else {\n");
+                fprintf(ctx->output, "                _rpgle_eof_%s = 1;\n", file_var);
+                fprintf(ctx->output, "            }\n");
+            }
+            
+            fprintf(ctx->output, "        } else {\n");
+            fprintf(ctx->output, "            _rpgle_eof_%s = 1;\n", file_var);
+            fprintf(ctx->output, "        }\n");
+            fprintf(ctx->output, "    }\n");
+            break;
+        }
+        
+        case NODE_READPE: {
+            codegen_indent(ctx);
+            const char* file_var = node->data.file_io.file_name;
+            const char* record_var = node->data.file_io.record_var;
+            
+            /* READPE - Read previous equal: read previous record with matching key */
+            fprintf(ctx->output, "/* READPE: Read previous record with matching key from %s */\n", file_var);
+            
+            codegen_indent(ctx);
+            fprintf(ctx->output, "if (%s) {\n", file_var);
+            fprintf(ctx->output, "        long _cur = ftell(%s);\n", file_var);
+            fprintf(ctx->output, "        _rpgle_equal = 0;\n");
+            fprintf(ctx->output, "        if (_cur > 0) {\n");
+            fprintf(ctx->output, "            fseek(%s, _cur - 80, SEEK_SET);\n", file_var);
+            
+            if (record_var) {
+                fprintf(ctx->output, "            if (fgets(%s, sizeof(%s), %s)) {\n",
+                        record_var, record_var, file_var);
+                fprintf(ctx->output, "                %s[strcspn(%s, \"\\n\")] = 0;\n",
+                        record_var, record_var);
+                fprintf(ctx->output, "                _rpgle_equal = 1;\n");
+                fprintf(ctx->output, "                _rpgle_eof_%s = 0;\n", file_var);
+                fprintf(ctx->output, "            } else {\n");
+                fprintf(ctx->output, "                _rpgle_eof_%s = 1;\n", file_var);
+                fprintf(ctx->output, "            }\n");
+            }
+            
+            fprintf(ctx->output, "        } else {\n");
+            fprintf(ctx->output, "            _rpgle_eof_%s = 1;\n", file_var);
+            fprintf(ctx->output, "        }\n");
+            fprintf(ctx->output, "    }\n");
+            break;
+        }
+        
         case NODE_DCL_PROC: {
             /* Check if this is the Main procedure */
             const char* proc_name = node->data.procedure.name;
@@ -1309,6 +1493,7 @@ void codegen_program(CodeGenContext* ctx, ASTNode* node) {
     fprintf(ctx->output, "#include <stdio.h>\n");
     fprintf(ctx->output, "#include <stdlib.h>\n");
     fprintf(ctx->output, "#include <string.h>\n");
+    fprintf(ctx->output, "#include <stdbool.h>\n");
     fprintf(ctx->output, "#include <math.h>\n");
     fprintf(ctx->output, "#include <time.h>\n\n");
     
@@ -1423,6 +1608,7 @@ void codegen_program(CodeGenContext* ctx, ASTNode* node) {
     fprintf(ctx->output, "int _rpgle_open = 0;\n\n");
     
     fprintf(ctx->output, "int found(void) { return _rpgle_found; }\n");
+    fprintf(ctx->output, "int equal(void) { return _rpgle_equal; }\n");
     fprintf(ctx->output, "int error(void) { return _rpgle_error; }\n");
     fprintf(ctx->output, "int open_func(char* file) { return _rpgle_open; }\n\n");
     

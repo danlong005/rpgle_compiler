@@ -43,6 +43,11 @@ typedef enum {
     NODE_DELETE,
     NODE_OPEN,
     NODE_CLOSE,
+    NODE_SETLL,
+    NODE_SETGT,
+    NODE_READE,
+    NODE_READP,
+    NODE_READPE,
     
     /* Expressions */
     NODE_BINARY_OP,
@@ -246,6 +251,7 @@ typedef struct ASTNode {
     
     int line;
     int column;
+    int is_boolean_literal;  /* Flag to indicate boolean literals from *ON or *OFF */
 } ASTNode;
 
 /* Function prototypes */
