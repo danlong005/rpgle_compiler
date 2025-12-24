@@ -16,6 +16,8 @@ src/*.output
 
 # Generated C files from examples
 examples/*.c
+*.c
+./test*
 
 # Editor and IDE files
 *.swp
