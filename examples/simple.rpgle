@@ -1,0 +1,3 @@
+**free
+CTL-OPT DFTACTGRP(*NO);
+DCL-S x INT(10);

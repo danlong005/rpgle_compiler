@@ -1,0 +1,675 @@
+program ::= statement*
+
+statement ::= ctl_opt_stmt
+            | declaration
+            | procedure_declaration
+            | control_flow_stmt
+            | operation_stmt
+            | ';'
+
+control_flow_stmt ::= if_stmt
+                    | for_stmt
+                    | dow_stmt
+                    | dou_stmt
+                    | select_stmt
+
+operation_stmt ::= eval_stmt
+                 | return_stmt
+                 | callp_stmt
+                 | dsply_stmt
+                 | file_io_stmt
+
+file_io_stmt ::= open_stmt
+               | close_stmt
+               | read_stmt
+               | write_stmt
+               | chain_stmt
+
+open_stmt ::= 'OPEN' IDENTIFIER ';'
+
+close_stmt ::= 'CLOSE' IDENTIFIER ';'
+
+read_stmt ::= 'READ' IDENTIFIER read_record? ';'
+
+read_record ::= IDENTIFIER
+
+write_stmt ::= 'WRITE' IDENTIFIER write_record? ';'
+
+write_record ::= IDENTIFIER
+
+chain_stmt ::= 'CHAIN' expression IDENTIFIER chain_record? ';'
+
+chain_record ::= IDENTIFIER
+
+ctl_opt_stmt ::= 'CTL-OPT' ctl_option ( ctl_option )* ';'
+
+ctl_option ::= IDENTIFIER ctl_option_value?
+
+ctl_option_value ::= '(' ( IDENTIFIER | '*' IDENTIFIER | expression ) ')'
+
+declaration ::= dcl_s_stmt
+              | dcl_c_stmt
+              | dcl_f_stmt
+              | dcl_ds_stmt
+
+dcl_s_stmt ::= 'DCL-S' IDENTIFIER type_spec dim_clause? init_clause? ';'
+
+dcl_c_stmt ::= 'DCL-C' IDENTIFIER 'CONST' '(' expression ')' ';'
+
+dcl_f_stmt ::= 'DCL-F' IDENTIFIER file_options? ';'
+
+file_options ::= IDENTIFIER
+
+dcl_ds_stmt ::= 'DCL-DS' IDENTIFIER 'QUALIFIED'? ';'
+                ds_field_list
+                'END-DS' ';'
+              | 'DCL-DS' IDENTIFIER 'LIKEDS' '(' IDENTIFIER ')' ';'
+              | 'DCL-DS' IDENTIFIER 'LIKEDS' '(' IDENTIFIER ')' 'DIM' '(' INTEGER ')' ';'
+              | 'DCL-DS' IDENTIFIER 'QUALIFIED' 'DIM' '(' INTEGER ')' ';'
+                ds_field_list
+                'END-DS' ';'
+
+ds_field_list ::= ds_field*
+
+ds_field ::= IDENTIFIER type_spec ';'
+
+procedure_declaration ::= 'DCL-PROC' IDENTIFIER ';'
+                          statement*
+                          'END-PROC' IDENTIFIER? ';'
+
+type_spec ::= char_type
+            | varchar_type
+            | int_type
+            | uns_type
+            | packed_type
+            | zoned_type
+            | ind_type
+            | pointer_type
+            | date_type
+            | time_type
+            | timestamp_type
+
+char_type ::= 'CHAR' '(' INTEGER ')'
+
+varchar_type ::= 'VARCHAR' '(' INTEGER ')'
+
+int_type ::= 'INT' '(' INTEGER ')'
+
+uns_type ::= 'UNS' '(' INTEGER ')'
+
+packed_type ::= 'PACKED' '(' INTEGER ':' INTEGER ')'
+
+zoned_type ::= 'ZONED' '(' INTEGER ':' INTEGER ')'
+
+ind_type ::= 'IND'
+
+pointer_type ::= 'POINTER'
+
+date_type ::= 'DATE'
+
+time_type ::= 'TIME'
+
+timestamp_type ::= 'TIMESTAMP'
+
+dim_clause ::= 'DIM' '(' INTEGER ')'
+
+init_clause ::= 'INZ' '(' expression ')'
+
+if_stmt ::= 'IF' expression ';'
+            statement*
+            elseif_clause*
+            else_clause?
+            'ENDIF' ';'
+
+elseif_clause ::= 'ELSEIF' expression ';'
+                  statement*
+
+else_clause ::= 'ELSE' ';'
+                statement*
+
+for_stmt ::= 'FOR' IDENTIFIER '=' expression for_direction expression for_step? ';'
+             statement*
+             'ENDFOR' ';'
+
+for_direction ::= 'TO'
+                | 'DOWNTO'
+
+for_step ::= 'BY' expression
+
+dow_stmt ::= 'DOW' expression ';'
+             statement*
+             'ENDDO' ';'
+
+dou_stmt ::= 'DOU' expression ';'
+             statement*
+             'ENDDO' ';'
+
+select_stmt ::= 'SELECT' ';'
+                when_clause+
+                other_clause?
+                'ENDSL' ';'
+
+when_clause ::= 'WHEN' expression ';'
+                statement*
+
+other_clause ::= 'OTHER' ';'
+                 statement*
+
+eval_stmt ::= eval_keyword? assignment_target '=' expression ';'
+
+eval_keyword ::= 'EVAL'
+
+assignment_target ::= IDENTIFIER
+                    | array_subscript
+
+array_subscript ::= IDENTIFIER '(' expression ')'
+
+return_stmt ::= 'RETURN' expression? ';'
+
+callp_stmt ::= callp_keyword? IDENTIFIER '(' argument_list ')' ';'
+
+callp_keyword ::= 'CALLP'
+
+dsply_stmt ::= 'DSPLY' dsply_opcode? expression ';'
+
+dsply_opcode ::= IDENTIFIER
+
+expression ::= logical_or_expr
+
+logical_or_expr ::= logical_and_expr ( or_operator logical_and_expr )*
+
+or_operator ::= 'OR'
+
+logical_and_expr ::= logical_not_expr ( and_operator logical_not_expr )*
+
+and_operator ::= 'AND'
+
+logical_not_expr ::= not_operator? comparison_expr
+
+not_operator ::= 'NOT'
+
+comparison_expr ::= additive_expr ( comparison_op additive_expr )?
+
+comparison_op ::= equal_op
+                | not_equal_op
+                | less_than_op
+                | less_equal_op
+                | greater_than_op
+                | greater_equal_op
+
+equal_op ::= '='
+
+not_equal_op ::= '<>'
+
+less_than_op ::= '<'
+
+less_equal_op ::= '<='
+
+greater_than_op ::= '>'
+
+greater_equal_op ::= '>='
+
+additive_expr ::= multiplicative_expr ( additive_op multiplicative_expr )*
+
+additive_op ::= plus_op
+              | minus_op
+
+plus_op ::= '+'
+
+minus_op ::= '-'
+
+multiplicative_expr ::= power_expr ( multiplicative_op power_expr )*
+
+multiplicative_op ::= multiply_op
+                    | divide_op
+
+multiply_op ::= '*'
+
+divide_op ::= '/'
+
+power_expr ::= unary_expr ( power_op unary_expr )?
+
+power_op ::= '**'
+
+unary_expr ::= unary_minus? primary_expr
+
+unary_minus ::= '-'
+
+primary_expr ::= variable_ref
+               | literal_value
+               | constant
+               | function_call
+               | parenthesized_expr
+
+variable_ref ::= IDENTIFIER
+               | array_subscript
+
+literal_value ::= INTEGER
+                | DECIMAL
+                | STRING
+                | DATE
+                | TIME
+                | TIMESTAMP
+
+parenthesized_expr ::= '(' expression ')'
+
+constant ::= on_constant
+           | off_constant
+           | blank_constant
+           | blanks_constant
+           | zero_constant
+           | zeros_constant
+           | null_constant
+           | hival_constant
+           | loval_constant
+           | all_constant
+
+on_constant ::= '*ON'
+
+off_constant ::= '*OFF'
+
+blank_constant ::= '*BLANK'
+
+blanks_constant ::= '*BLANKS'
+
+zero_constant ::= '*ZERO'
+
+zeros_constant ::= '*ZEROS'
+
+null_constant ::= '*NULL'
+
+hival_constant ::= '*HIVAL'
+
+loval_constant ::= '*LOVAL'
+
+all_constant ::= '*ALL'
+
+function_call ::= string_bif
+                | numeric_bif
+                | conversion_bif
+                | datetime_bif
+                | array_bif
+                | pointer_bif
+                | file_status_bif
+                | bitwise_bif
+                | system_bif
+
+string_bif ::= trim_bif
+             | trimr_bif
+             | triml_bif
+             | subst_bif
+             | scan_bif
+             | replace_bif
+             | xlate_bif
+             | len_bif
+             | scanrpl_bif
+             | check_bif
+             | checkr_bif
+             | split_bif
+
+trim_bif ::= '%TRIM' '(' expression ')'
+
+trimr_bif ::= '%TRIMR' '(' expression ')'
+
+triml_bif ::= '%TRIML' '(' expression ')'
+
+subst_bif ::= '%SUBST' '(' expression ':' expression subst_length? ')'
+
+subst_length ::= ':' expression
+
+scan_bif ::= '%SCAN' '(' expression ':' expression scan_start? ')'
+
+scan_start ::= ':' expression
+
+replace_bif ::= '%REPLACE' '(' expression ':' expression ':' expression replace_length? ')'
+
+replace_length ::= ':' expression
+
+xlate_bif ::= '%XLATE' '(' expression ':' expression ':' expression xlate_start? ')'
+
+xlate_start ::= ':' expression
+
+len_bif ::= '%LEN' '(' expression ')'
+
+scanrpl_bif ::= '%SCANRPL' '(' expression ':' expression ':' expression scanrpl_start? ')'
+
+scanrpl_start ::= ':' expression scanrpl_length?
+
+scanrpl_length ::= ':' expression
+
+check_bif ::= '%CHECK' '(' expression ':' expression check_start? ')'
+
+check_start ::= ':' expression
+
+checkr_bif ::= '%CHECKR' '(' expression ':' expression checkr_start? ')'
+
+checkr_start ::= ':' expression
+
+split_bif ::= '%SPLIT' '(' expression ':' expression ':' expression ')'
+
+split_bif ::= '%SPLIT' '(' expression ':' expression ':' expression ')'
+
+numeric_bif ::= size_bif
+              | abs_bif
+              | sqrt_bif
+              | rem_bif
+              | div_bif
+              | dech_bif
+              | decpos_bif
+              | inth_bif
+
+size_bif ::= '%SIZE' '(' expression ')'
+
+abs_bif ::= '%ABS' '(' expression ')'
+
+sqrt_bif ::= '%SQRT' '(' expression ')'
+
+rem_bif ::= '%REM' '(' expression ':' expression ')'
+
+div_bif ::= '%DIV' '(' expression ':' expression ')'
+
+dech_bif ::= '%DECH' '(' expression ':' expression ')'
+
+decpos_bif ::= '%DECPOS' '(' expression ')'
+
+inth_bif ::= '%INTH' '(' expression ')'
+
+conversion_bif ::= char_bif
+                 | int_bif
+                 | dec_bif
+                 | float_bif
+                 | uns_bif
+                 | unsh_bif
+                 | editc_bif
+                 | editw_bif
+                 | editflt_bif
+                 | graph_bif
+                 | ucs2_bif
+                 | hex_bif
+
+char_bif ::= '%CHAR' '(' expression ')'
+
+int_bif ::= '%INT' '(' expression ')'
+
+dec_bif ::= '%DEC' '(' expression dec_precision? ')'
+
+dec_precision ::= ':' expression ':' expression
+
+float_bif ::= '%FLOAT' '(' expression ')'
+
+uns_bif ::= '%UNS' '(' expression ')'
+
+unsh_bif ::= '%UNSH' '(' expression ')'
+
+editc_bif ::= '%EDITC' '(' expression ':' expression editc_fill? ')'
+
+editc_fill ::= ':' expression
+
+editw_bif ::= '%EDITW' '(' expression ':' expression ')'
+
+editflt_bif ::= '%EDITFLT' '(' expression editflt_decimals? ')'
+
+editflt_decimals ::= ':' expression
+
+graph_bif ::= '%GRAPH' '(' expression graph_ccsid? ')'
+
+graph_ccsid ::= ':' expression
+
+ucs2_bif ::= '%UCS2' '(' expression ucs2_ccsid? ')'
+
+ucs2_ccsid ::= ':' expression
+
+hex_bif ::= '%HEX' '(' expression ')'
+
+datetime_bif ::= date_bif
+               | time_bif
+               | timestamp_bif
+               | years_bif
+               | months_bif
+               | days_bif
+               | hours_bif
+               | minutes_bif
+               | seconds_bif
+               | mseconds_bif
+               | diff_bif
+               | subdur_bif
+               | adddur_bif
+
+date_bif ::= '%DATE' '(' date_value? ')'
+
+date_value ::= expression date_format?
+
+date_format ::= ':' expression
+
+time_bif ::= '%TIME' '(' time_value? ')'
+
+time_value ::= expression time_format?
+
+time_format ::= ':' expression
+
+timestamp_bif ::= '%TIMESTAMP' '(' timestamp_value? ')'
+
+timestamp_value ::= expression timestamp_format?
+
+timestamp_format ::= ':' expression
+
+years_bif ::= '%YEARS' '(' expression ')'
+
+months_bif ::= '%MONTHS' '(' expression ')'
+
+days_bif ::= '%DAYS' '(' expression ')'
+
+hours_bif ::= '%HOURS' '(' expression ')'
+
+minutes_bif ::= '%MINUTES' '(' expression ')'
+
+seconds_bif ::= '%SECONDS' '(' expression ')'
+
+mseconds_bif ::= '%MSECONDS' '(' expression ')'
+
+diff_bif ::= '%DIFF' '(' expression ':' expression ':' expression ')'
+
+subdur_bif ::= '%SUBDUR' '(' expression ':' expression ':' expression ')'
+
+adddur_bif ::= '%ADDDUR' '(' expression ':' expression ':' expression ')'
+
+array_bif ::= elem_bif
+            | lookup_bif
+            | lookuplt_bif
+            | lookuple_bif
+            | lookupgt_bif
+            | lookupge_bif
+            | subarr_bif
+            | sortarr_bif
+
+elem_bif ::= '%ELEM' '(' IDENTIFIER ')'
+
+lookup_bif ::= '%LOOKUP' '(' expression ':' IDENTIFIER lookup_indexes? ')'
+
+lookup_indexes ::= ':' expression lookup_elements?
+
+lookup_elements ::= ':' expression
+
+lookuplt_bif ::= '%LOOKUPLT' '(' expression ':' IDENTIFIER lookuplt_indexes? ')'
+
+lookuplt_indexes ::= ':' expression lookuplt_elements?
+
+lookuplt_elements ::= ':' expression
+
+lookuple_bif ::= '%LOOKUPLE' '(' expression ':' IDENTIFIER lookuple_indexes? ')'
+
+lookuple_indexes ::= ':' expression lookuple_elements?
+
+lookuple_elements ::= ':' expression
+
+lookupgt_bif ::= '%LOOKUPGT' '(' expression ':' IDENTIFIER lookupgt_indexes? ')'
+
+lookupgt_indexes ::= ':' expression lookupgt_elements?
+
+lookupgt_elements ::= ':' expression
+
+lookupge_bif ::= '%LOOKUPGE' '(' expression ':' IDENTIFIER lookupge_indexes? ')'
+
+lookupge_indexes ::= ':' expression lookupge_elements?
+
+lookupge_elements ::= ':' expression
+
+subarr_bif ::= '%SUBARR' '(' IDENTIFIER ':' expression subarr_length? ')'
+
+subarr_length ::= ':' expression
+
+sortarr_bif ::= '%SORTARR' '(' IDENTIFIER sortarr_start? ')'
+
+sortarr_start ::= ':' expression sortarr_elements?
+
+sortarr_elements ::= ':' expression
+
+pointer_bif ::= addr_bif
+              | str_bif
+              | paddr_bif
+              | proc_bif
+              | alloc_bif
+              | realloc_bif
+              | dealloc_bif
+              | nullind_bif
+
+addr_bif ::= '%ADDR' '(' IDENTIFIER ')'
+
+str_bif ::= '%STR' '(' expression str_length? ')'
+
+str_length ::= ':' expression
+
+paddr_bif ::= '%PADDR' '(' IDENTIFIER ')'
+
+proc_bif ::= '%PROC' '(' ')'
+
+alloc_bif ::= '%ALLOC' '(' expression ')'
+
+realloc_bif ::= '%REALLOC' '(' expression ':' expression ')'
+
+dealloc_bif ::= '%DEALLOC' '(' expression ')'
+
+nullind_bif ::= '%NULLIND' '(' IDENTIFIER ')'
+
+file_status_bif ::= found_bif
+                  | eof_bif
+                  | equal_bif
+                  | error_bif
+                  | open_bif
+                  | status_bif
+                  | record_bif
+
+found_bif ::= '%FOUND' '(' found_file? ')'
+
+found_file ::= IDENTIFIER
+
+eof_bif ::= '%EOF' '(' eof_file? ')'
+
+eof_file ::= IDENTIFIER
+
+equal_bif ::= '%EQUAL' '(' equal_file? ')'
+
+equal_file ::= IDENTIFIER
+
+error_bif ::= '%ERROR' '(' ')'
+
+open_bif ::= '%OPEN' '(' IDENTIFIER ')'
+
+status_bif ::= '%STATUS' '(' status_file? ')'
+
+status_file ::= IDENTIFIER
+
+record_bif ::= '%RECORD' '(' IDENTIFIER ')'
+
+bitwise_bif ::= bitand_bif
+              | bitor_bif
+              | bitxor_bif
+              | bitnot_bif
+
+bitand_bif ::= '%BITAND' '(' expression ':' expression ')'
+
+bitor_bif ::= '%BITOR' '(' expression ':' expression ')'
+
+bitxor_bif ::= '%BITXOR' '(' expression ':' expression ')'
+
+bitnot_bif ::= '%BITNOT' '(' expression ')'
+
+system_bif ::= parms_bif
+             | occur_bif
+             | parmnum_bif
+             | parser_bif
+             | dtaara_bif
+             | fields_bif
+             | list_bif
+             | xml_bif
+             | data_bif
+             | kds_bif
+             | omitted_bif
+             | range_bif
+
+parms_bif ::= '%PARMS' '(' ')'
+
+occur_bif ::= '%OCCUR' '(' IDENTIFIER occur_value? ')'
+
+occur_value ::= ':' expression
+
+parmnum_bif ::= '%PARMNUM' '(' ')'
+
+parser_bif ::= '%PARSER' '(' expression ':' expression parser_options? ')'
+
+parser_options ::= ':' expression
+
+dtaara_bif ::= '%DTAARA' '(' IDENTIFIER dtaara_value? ')'
+
+dtaara_value ::= ':' expression
+
+fields_bif ::= '%FIELDS' '(' IDENTIFIER ( ':' IDENTIFIER )* ')'
+
+list_bif ::= '%LIST' '(' expression ( ':' expression )* ')'
+
+xml_bif ::= '%XML' '(' expression xml_options? ')'
+
+xml_options ::= ':' expression
+
+data_bif ::= '%DATA' '(' ')'
+
+kds_bif ::= '%KDS' '(' IDENTIFIER ( ':' expression )* ')'
+
+omitted_bif ::= '%OMITTED' '(' IDENTIFIER ')'
+
+range_bif ::= '%RANGE' '(' expression ':' expression ')'
+
+argument_list ::= expression more_arguments*
+
+more_arguments ::= ':' expression
+
+IDENTIFIER ::= [a-zA-Z] [a-zA-Z0-9_]*
+
+INTEGER ::= [0-9]+
+
+DECIMAL ::= [0-9]+ '.' [0-9]+
+
+STRING ::= "'" string_char* "'"
+
+string_char ::= [^']
+              | "''"
+
+DATE ::= date_prefix "'" date_digits "'"
+
+date_prefix ::= [dD]
+
+date_digits ::= [0-9] [0-9] [0-9] [0-9] '-' [0-9] [0-9] '-' [0-9] [0-9]
+
+TIME ::= time_prefix "'" time_digits "'"
+
+time_prefix ::= [tT]
+
+time_digits ::= [0-9] [0-9] ':' [0-9] [0-9] ':' [0-9] [0-9]
+
+TIMESTAMP ::= timestamp_prefix "'" timestamp_digits "'"
+
+timestamp_prefix ::= [zZ]
+
+timestamp_digits ::= [0-9] [0-9] [0-9] [0-9] '-' [0-9] [0-9] '-' [0-9] [0-9] '-'
+                     [0-9] [0-9] '.' [0-9] [0-9] '.' [0-9] [0-9] '.'
+                     [0-9] [0-9] [0-9] [0-9] [0-9] [0-9]

@@ -1,0 +1,39 @@
+# .gitignore for RPGLE Compiler
+
+# Build artifacts
+*.o
+*.out
+*.exe
+bin/
+obj/
+test/
+
+# Generated parser/lexer files
+src/lex.yy.c
+src/rpgle.tab.c
+src/rpgle.tab.h
+src/*.output
+
+# Generated C files from examples
+examples/*.c
+
+# Editor and IDE files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.sublime-*
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Debugging
+*.dSYM/
+core
+vgcore.*
+
+# Temporary files
+*.tmp
+*.bak
