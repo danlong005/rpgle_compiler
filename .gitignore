@@ -18,7 +18,6 @@ src/*.output
 examples/*.c
 *.c
 
-
 # Editor and IDE files
 *.swp
 *.swo
